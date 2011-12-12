@@ -1,0 +1,48 @@
+__print_options_from_man() {
+	ruby -ne '$_.scan(
+	/
+	  ^\s+
+	  -(\w)(?:\ <?[\w-]+>?)?(?:,\ --([\w-]+)(?:[=\ ]<?[\w-]+>?)?)?
+	  (?=\s+)
+	|
+	  ^\s+
+	  -(\w)(?:\[<?[\w-]+>?\])?(?:,\ --([\w-]+)(?:\[[=\ ]<?[\w-]+>?\])?)?
+	  (?=\s+)$
+	|
+	  ^\s+
+	  --([\w\-]+)(?:[=\ ]<?[\w-]+?>?)?
+	  (?=\s+)$
+	/x
+	).map! { |e| e.compact! }.each do |a|
+	  s = a.map do |e|
+	    if e.length > 1
+	      "--#{e}"
+	    else
+	      "-#{e}"
+	    end
+	  end.join(" ")
+    puts s
+	end
+	'
+}
+
+__produce_skeleton() {
+local opts=$(man $1 | col -b | __print_options_from_man | tr '\n' ' ');
+echo '
+_skel_'$1'_comp() {
+    local cur prev opts
+    COMPREPLY=()
+    cur="${COMP_WORDS[COMP_CWORD]}"
+    prev="${COMP_WORDS[COMP_CWORD-1]}"
+    opts="'$opts'"
+
+    if [[ ${cur} == -* || ${COMP_CWORD} -eq 1 ]] ; then
+        COMPREPLY=( $(compgen -W "${opts}" -- ${cur}) )
+        return 0
+    fi
+}
+complete -F _skel_'$1'_comp '$1'
+'
+}
+
+__produce_skeleton $1
